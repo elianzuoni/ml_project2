@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 
 
-def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(20,10), dpi=250, remove_key_mode=True,
-                                 show_chords=False, marker_map={'MAJOR':'o', 'MINOR':'s', 'UNSPEC':'D'}, marker_size=50,
-                                 colour_map={'I':'blue', 'II':'yellow', 'III':'green', 'IV':'purple', 'V':'red', 'VI':'black',
-                                             'VII':'pink'}, fig_name='sarno.png'):
+def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(6,6), dpi=250, remove_key_mode=False, 
+                                 chord_types_to_label=[], chord_types_not_to_label=[], label_size=3, 
+                                 marker_map={'MAJOR':'o', 'MINOR':'s', 'UNSPEC':'D'}, marker_size=5, 
+                                 colour_map={'I':'blue', 'II':'yellow', 'III':'green', 'IV':'purple', 'V':'red', 
+                                             'VI':'orange', 'VII':'pink'}, fig_name='figures/sarno.png'):
     '''
     Plots the 2d-reduced vectors corresponding to each chord. Colours each point according to the 
     key it's in, and to its base note.
@@ -15,16 +16,21 @@ def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(20,
             figsize: the size of the graph.
             dpi: the dot-per-inch of the graph.
             remove_key_mode: flag signalling whether to remove the key mode indication from the chord.
-            show_chords: flag signalling whether to show a label with the chord name near each point.
+            chord_types_to_label: list containing substrings. Chords containing any of those substring will have a label with the
+                                 chord name near the point in the graph.
+            chord_types_not_to_label: list containing substrings. Chords containing any of those substring will not have the label.
+                                      Overrides chord_types_to_label.
+            label_size: the font size of the labels.
             marker_map: dictionary mapping key mode ('MAJOR'/'MINOR'/'UNSPEC') to marker.
             marker_size: the size of each marker.
-            colour_map: dictionary mapping each base degree ('I' through 'VII') to a colour string.
+            colour_map: dictionary mapping each root ('I' through 'VII') to a colour string.
             fig_name: name of the file to save the plot to.
     Output. None: just plots the points.
     '''
     
     # Separate chords by key mode
     all_chords = list(wv_red.keys())
+    
     key_modes = ['MAJOR', 'MINOR', 'UNSPEC']
     chords_by_key = {}
     chords_by_key['MAJOR'] = [chord for chord in all_chords if 'MAJOR' in chord]
@@ -50,13 +56,18 @@ def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(20,
         colours = [get_point_colour(chord, colour_map) for chord in chords_by_key[key]]
         ax.scatter(xs_by_key[key], ys_by_key[key], c=colours, marker=marker, s=marker_size)
         
-    # Add labels, if required
-    if show_chords:
+    # Add labels, where required
+    for chord in all_chords:
+        # Skip if current chord contains a forbidden substring, or if it contains none of the allowed substrings
+        forbidden = any(chord_type in chord for chord_type in chord_types_not_to_label)
+        required = any(chord_type in chord for chord_type in chord_types_to_label)
+        if forbidden or not required:
+            continue
+        x, y = wv_red[chord]
         # Remove the key mode indication, if required
         if remove_key_mode:
-            chords = [get_without_key_mode(chord) for chord in chords]
-        for i, chord in enumerate(chords):
-            ax.annotate(chord, xy = (xs[i], ys[i]))
+            chord = get_without_key_mode(chord)
+        ax.annotate(chord, xy = (x, y), fontsize=label_size)
 
     plt.savefig(fig_name)
     
