@@ -1,11 +1,43 @@
+import numpy as np
 import matplotlib.pyplot as plt
+from scipy.cluster.hierarchy import dendrogram
 
 
-def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(6,6), dpi=250, remove_key_mode=False, 
-                                 chord_types_to_label=[], chord_types_not_to_label=[], label_size=3, 
-                                 marker_map={'MAJOR':'o', 'MINOR':'s', 'UNSPEC':'D'}, marker_size=5, 
-                                 colour_map={'I':'blue', 'II':'yellow', 'III':'green', 'IV':'purple', 'V':'red', 
-                                             'VI':'orange', 'VII':'pink'}, fig_name='figures/sarno.png'):
+def plot_dendrogram(model, figsize=(5,10), dpi=200, fig_name='figures/dendrogram', **kwargs):
+    # Create linkage matrix and then plot the dendrogram
+
+    # create the counts of samples under each node
+    counts = np.zeros(model.children_.shape[0])
+    n_samples = len(model.labels_)
+    for i, merge in enumerate(model.children_):
+        current_count = 0
+        for child_idx in merge:
+            if child_idx < n_samples:
+                current_count += 1  # leaf node
+            else:
+                current_count += counts[child_idx - n_samples]
+        counts[i] = current_count
+
+    linkage_matrix = np.column_stack([model.children_, model.distances_,
+                                      counts]).astype(float)
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    
+    # Plot the corresponding dendrogram
+    dendrogram(linkage_matrix, ax=ax, **kwargs)
+    
+    plt.savefig(fig_name)
+    
+    return
+
+
+def visual_chord_vectors_clusters(wv_red, wv_clus, dimred_method='', plot_title='', figsize=(6,6), dpi=250, remove_key_mode=False, 
+                                  chord_types_to_label=[], chord_types_not_to_label=[], label_size=3, 
+                                  marker_map={'MAJOR':'o', 'MINOR':'s', 'UNSPEC':'D'}, marker_size=5, 
+                                  colours=['red', 'yellow', 'blue', 'lawngreen', 'darkorange', 'purple', 'cyan', 'black', 
+                                           'sienna', 'grey', 'darkolivegreen', 'midnightblue', 'plum', 'indianred', 'springgreen',
+                                           'palegreen', 'lightpink', 'rosybrown', 'lavenderblush', 'aquamarine'], 
+                                  fig_name='figures/sarno.png'):
     '''
     Plots the 2d-reduced vectors corresponding to each chord. Colours each point according to the 
     key it's in, and to its base note.
@@ -23,7 +55,8 @@ def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(6,6
             label_size: the font size of the labels.
             marker_map: dictionary mapping key mode ('MAJOR'/'MINOR'/'UNSPEC') to marker.
             marker_size: the size of each marker.
-            colour_map: dictionary mapping each root ('I' through 'VII') to a colour string.
+            wv_clus: a dictionary mapping chords to cluster labels.
+            colours: list of colours, one per cluster.
             fig_name: name of the file to save the plot to.
     Output. None: just plots the points.
     '''
@@ -53,8 +86,8 @@ def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(6,6
     # Scatter points, for each class of chords
     for key in key_modes:
         marker = marker_map[key]
-        colours = [get_point_colour(chord, colour_map) for chord in chords_by_key[key]]
-        ax.scatter(xs_by_key[key], ys_by_key[key], c=colours, marker=marker, s=marker_size)
+        point_colours = [colours[wv_clus[chord]] for chord in chords_by_key[key]]
+        ax.scatter(xs_by_key[key], ys_by_key[key], c=point_colours, marker=marker, s=marker_size)
         
     # Add labels, where required
     for chord in all_chords:
@@ -72,25 +105,6 @@ def visual_reduced_chord_vectors(wv_red, dimred_method, plot_title, figsize=(6,6
     plt.savefig(fig_name)
     
     return
-
-
-def get_point_colour(chord, colour_map):
-    '''
-    Returns the colour of the point corresponding to the chord, depending on its base degree.
-    
-    Input.  chord: a string.
-    Output. colour: a colour string.
-    '''
-    
-    # First, remove key mode
-    no_key = chord.replace('MAJOR;', '').replace('MINOR;', '')
-    # Then, remove alterations
-    no_alter = no_key.replace('b', '').replace('#', '')
-    # Finally, remove type (MAJ/MIN/AUG/DIM)
-    no_type = no_alter.replace(':MAJ', '').replace(':MIN', '').replace(':AUG', '').replace(':DIM', '')
-    
-    colour = colour_map[no_type]
-    return colour
 
 
 def get_without_key_mode(chord):
