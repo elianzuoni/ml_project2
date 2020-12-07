@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.cluster.hierarchy import dendrogram
 
 
-def plot_dendrogram(model, figsize=(5,10), dpi=200, fig_name='figures/dendrogram', **kwargs):
+def plot_dendrogram(model, figsize=(10,10), dpi=100, fig_name='figures/dendrogram', **kwargs):
     # Create linkage matrix and then plot the dendrogram
 
     # create the counts of samples under each node
@@ -34,7 +34,7 @@ def plot_dendrogram(model, figsize=(5,10), dpi=200, fig_name='figures/dendrogram
 def visual_chord_vectors_clusters(wv_red, wv_clus, dimred_method='', plot_title='', figsize=(6,6), dpi=250, remove_key_mode=False, 
                                   chord_types_to_label=[], chord_types_not_to_label=[], label_size=3, 
                                   marker_map={'MAJOR':'o', 'MINOR':'s', 'UNSPEC':'D'}, marker_size=5, 
-                                  colours=['red', 'yellow', 'blue', 'lawngreen', 'darkorange', 'purple', 'cyan', 'black', 
+                                  colours=['red', 'blue', 'yellow', 'lawngreen', 'darkorange', 'purple', 'cyan', 'black', 
                                            'sienna', 'grey', 'darkolivegreen', 'midnightblue', 'plum', 'indianred', 'springgreen',
                                            'palegreen', 'lightpink', 'rosybrown', 'lavenderblush', 'aquamarine'], 
                                   fig_name='figures/sarno.png'):
@@ -117,3 +117,16 @@ def get_without_key_mode(chord):
     
     chord_nokey = chord.replace('MAJOR;', '').replace('MINOR;', '')
     return chord_nokey
+
+def print_similarities(model, chord_types_to_print_sim=[''], chord_types_not_to_print_sim=[], topn=4):
+    # For each required chord, print the 'topn' most similar chords in the embedding space
+    for chord in  sorted(model.wv.vocab.keys()):
+        # Skip if current chord contains a forbidden substring, or if it contains none of the allowed substrings
+        forbidden = any(chord_type in chord for chord_type in chord_types_not_to_print_sim)
+        required = any(chord_type in chord for chord_type in chord_types_to_print_sim)
+        if forbidden or not required:
+            continue
+        similar=':'
+        for neighbour, similarity in model.wv.most_similar(chord, topn=topn):
+            similar +=f' ({neighbour}, {similarity:.3f}),'
+        print(chord + similar)
